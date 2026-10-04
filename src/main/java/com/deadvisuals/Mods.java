@@ -162,7 +162,7 @@ public final class Mods {
     public static final Module PERF = reg(new Module("performance", "extras", true)
             .b("Unlimited FPS", true).b("VSync off", true).b("No entity shadows", true)
             .b("No clouds", true).b("Biome blend 0", true).b("Entities closer", true)
-            .b("Smooth light off", false).b("Particles minimal", false)
+            .b("Smooth light off", false)
             .b("Adaptive effects", true).n("Low FPS limit", 60, 20, 144, 5));
 
     public static final Module TITLE = reg(new Module("main menu", "extras", true)
