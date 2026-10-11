@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "pulsestylevisuals",
+  "version": "${version}",
+  "name": "Pulse Style Visuals",
+  "description": "Original visual/cosmetic client mod inspired by visual enhancement mods.",
+  "authors": ["Custom project"],
+  "environment": "client",
+  "entrypoints": {
+    "client": ["ua.pulsestyle.PulseStyleVisuals"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
