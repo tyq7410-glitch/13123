@@ -1,4 +1,6 @@
 {
-  "key.pulsestylevisuals.menu": "Pulse Visuals Menu / Toggle",
-  "category.pulsestylevisuals": "Pulse Style Visuals"
+  "key.auroravisuals.menu": "Open menu",
+  "key.auroravisuals.zoom": "Zoom",
+  "key.auroravisuals.copy": "Copy coords",
+  "key.category.auroravisuals.main": "Aurora Visuals"
 }

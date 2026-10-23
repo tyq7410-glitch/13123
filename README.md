@@ -1,15 +1,12 @@
-# Pulse Style Visuals — Fabric 1.21.11
+# Aurora Visuals
+Client-side Fabric visuals mod for Minecraft 1.21.11. Menu: Right Shift. Zoom: C.
 
-Original client-side visual mod project inspired by visual enhancement mods.
+## Get the jar via GitHub (no local setup)
+1. Create a new GitHub repo, upload ALL files from this folder (keep the `.github` folder).
+2. Open the **Actions** tab -> run **build** (or it starts on push).
+3. When it is green, open the run -> **Artifacts** -> download `aurora-visuals`, unzip, take `aurora-visuals-1.0.0.jar` (not `-sources`).
+4. Put the jar and Fabric API into `.minecraft/mods`.
 
-Current base includes:
-- FPS HUD
-- target HP HUD
-- dark/pink visual HUD style
-- free original cosmetic indicator/system base
-- particles toggle/base
-- Right Shift control cycling
-- GitHub Actions build to JAR
-- Java 21 / Fabric 1.21.11
+Tag `v1.0.0` on the repo to get the jar published under Releases automatically.
 
-This project does not contain copied Pulse Visuals source code or paid Pulse assets.
+Keys: Right Shift = menu, C = zoom, 'Copy coords' key can be bound in Controls.
