@@ -6,5 +6,5 @@
   "description": "Client-side HUD, crosshair and cosmetic visuals with big settings.",
   "environment": "client",
   "entrypoints": { "client": ["dev.auroravisuals.AuroraVisuals"] },
-  "depends": { "fabricloader": ">=0.18.0", "minecraft": "~1.21.11", "fabric-api": "*" }
+  "depends": { "fabricloader": ">=0.16.0", "minecraft": "~1.21.11", "fabric-api": "*" }
 }

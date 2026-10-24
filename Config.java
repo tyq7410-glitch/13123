@@ -16,8 +16,8 @@ public class Config {
     }
     public static final String[] PRESETS = {"Ocean", "Sunset", "Mint", "Violet", "Sakura", "Rainbow"};
     public static final String[] TEXT_MODES = {"White", "Accent"};
-    public Pos pPanel = new Pos(0.01f, 0.01f), pKeys = new Pos(0.01f, 0.34f), pArmor = new Pos(0.9f, 0.01f),
-               pPot = new Pos(0.78f, 0.3f), pTarget = new Pos(0.56f, 0.6f), pCd = new Pos(0.01f, 0.5f);
+    public Pos pPanel = new Pos(0.01f, 0.01f), pKeys = new Pos(0.01f, 0.36f), pArmor = new Pos(0.9f, 0.28f),
+               pPot = new Pos(0.7f, 0.5f), pTarget = new Pos(0.56f, 0.6f), pCd = new Pos(0.01f, 0.58f);
     public boolean cdHud = true, cdReady = true, combatTimer = true, lowHp = true, targetArmor = true, showReach = true, pops = false;
     public int combatSecs = 15, lowHpThreshold = 8;
     // info 2
@@ -32,6 +32,21 @@ public class Config {
     public int pShape = 0;
     public boolean ring = false, helix = false, cloud = false, jumpRings = false, lvlBurst = false, fireflies = false;
     public float ringRadius = 0.7f;
+    // colors
+    public boolean accentCustom = false, chCustom = false;
+    public int accentRgb = 0x4DA6FF, chRgb = 0xFFFFFF, partRgb = 0x4DA6FF;
+    // data-driven features (see Feats / More)
+    public java.util.Map<String, Boolean> on = new java.util.HashMap<>();
+    public java.util.Map<String, Integer> rgb = new java.util.HashMap<>();
+    public java.util.Map<String, Float> num = new java.util.HashMap<>();
+    public Pos pGraph = new Pos(0.78f, 0.88f);
+    public static boolean on(String k) { Boolean b = I.on.get(k); return b != null && b; }
+    public static int rgb(String k, int d) { Integer v = I.rgb.get(k); return v == null ? d : v; }
+    public static float num(String k, float d) { Float v = I.num.get(k); return v == null ? d : v; }
+    // cosmetics 3
+    public boolean snow = false, heartAura = false, notes = false, electric = false, flameFeet = false,
+                   souls = false, sakura = false, enchant = false, totemAura = false;
+    public int cosIntensity = 2, killType = 0;
     public boolean wings = false, killEffect = true, noBob = false, noFovFx = false, hudBorder = false, accentBar = true;
     public float wingSize = 1f;
     public int textMode = 0, preset = 0;
@@ -68,6 +83,7 @@ public class Config {
     public int auraCount = 6;
 
     public int accent() {
+        if (accentCustom && !rainbow) return 0xFF000000 | accentRgb;
         float h = hue;
         if (rainbow) h += (System.currentTimeMillis() % 10000L) / 10000f * rainbowSpeed * 3f;
         return Color.HSBtoRGB(h % 1f, 0.65f, 1f) | 0xFF000000;
@@ -82,9 +98,34 @@ public class Config {
     }
     public static void resetPositions() {
         Config d = new Config();
-        I.pPanel = d.pPanel; I.pKeys = d.pKeys; I.pArmor = d.pArmor; I.pPot = d.pPot; I.pTarget = d.pTarget; I.pCd = d.pCd;
+        I.pPanel = d.pPanel; I.pKeys = d.pKeys; I.pArmor = d.pArmor; I.pPot = d.pPot; I.pTarget = d.pTarget; I.pCd = d.pCd; I.pGraph = d.pGraph;
     }
     public static void reset() { I = new Config(); save(); }
+
+    private static void keepLook(Config o, Config n) {
+        n.hue = o.hue; n.rainbow = o.rainbow; n.rainbowSpeed = o.rainbowSpeed; n.bgOpacity = o.bgOpacity; n.preset = o.preset;
+        n.accentCustom = o.accentCustom; n.accentRgb = o.accentRgb; n.chCustom = o.chCustom; n.chRgb = o.chRgb; n.partRgb = o.partRgb;
+        n.hudScale = o.hudScale; n.textShadow = o.textShadow; n.textMode = o.textMode;
+        n.pPanel = o.pPanel; n.pKeys = o.pKeys; n.pArmor = o.pArmor; n.pPot = o.pPot; n.pTarget = o.pTarget; n.pCd = o.pCd; n.pGraph = o.pGraph; n.rgb = o.rgb; n.num = o.num;
+    }
+
+    /** 0 = minimal, 1 = PvP, 2 = cosmetic. Theme and HUD positions are kept. */
+    public static void applyProfile(int i) {
+        Config n = new Config();
+        keepLook(I, n);
+        if (i == 0) {
+            n.watermark = false; n.coords = false; n.ping = false; n.keystrokes = false; n.combo = false;
+            n.armorHud = false; n.potionHud = false; n.targetHud = false; n.cdHud = false; n.lowHp = false;
+            n.crosshair = false; n.hitmarker = false; n.hitParticles = false; n.killEffect = false; n.lowFood = false;
+        } else if (i == 1) {
+            n.pops = true; n.itemCount = true; n.atkBar = true; n.hurtFlash = true; n.kills = true; n.bestCombo = true;
+            n.hitSound = 1; n.chDot = true; n.chOutline = true;
+        } else {
+            n.wings = true; n.halo = true; n.aura = true; n.trail = true; n.ring = true; n.footsteps = true;
+            n.sakura = true; n.heartAura = true; n.cosFirst = true; n.watermark = true;
+        }
+        I = n; save();
+    }
     private static Path slot(int n) { return FabricLoader.getInstance().getConfigDir().resolve("auroravisuals_slot" + n + ".json"); }
     public static void saveSlot(int n) { try { Files.writeString(slot(n), GSON.toJson(I)); } catch (Exception ignored) {} }
     public static boolean loadSlot(int n) {

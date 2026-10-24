@@ -1,6 +1,7 @@
 package dev.auroravisuals;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -34,6 +35,7 @@ public class AuroraVisuals implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         Config.load();
+        ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> { Extras.restore(mc); Config.save(); });
         KeyBinding.Category cat = KeyBinding.Category.create(Identifier.of("auroravisuals", "main"));
         menuKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.auroravisuals.menu", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, cat));
         zoomKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.auroravisuals.zoom", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_C, cat));
@@ -56,6 +58,9 @@ public class AuroraVisuals implements ClientModInitializer {
             }
             if (hitTimer > 0) hitTimer--;
             Extras.tick(mc);
+            More.tick(mc);
+            More2.tick(mc);
+            More3.tick(mc);
         });
 
         AttackEntityCallback.EVENT.register((p, w, h, e, hr) -> {
@@ -99,6 +104,9 @@ public class AuroraVisuals implements ClientModInitializer {
     private static void renderHud(DrawContext ctx) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.options.hudHidden) return;
+        More.renderBack(ctx, mc);
+        More2.renderBack(ctx, mc);
+        More3.renderBack(ctx, mc);
         Config c = Config.I;
         int sw = ctx.getScaledWindowWidth(), sh = ctx.getScaledWindowHeight();
         int acc = c.accent();
@@ -114,6 +122,9 @@ public class AuroraVisuals implements ClientModInitializer {
         }
         if (c.coords) lines.add(String.format("XYZ: %.0f %.0f %.0f", mc.player.getX(), mc.player.getY(), mc.player.getZ()));
         Extras.addInfoLines(lines, mc);
+        More.addLines(lines, mc);
+        More2.addLines(lines, mc);
+        More3.addLines(lines, mc);
 
         if (!lines.isEmpty()) {
             int w = 0;
@@ -146,6 +157,9 @@ public class AuroraVisuals implements ClientModInitializer {
             c.pKeys.w = 58 * c.hudScale; c.pKeys.h = (c.keysMouse ? 78 : 58) * c.hudScale;
         }
         Extras.renderSide(ctx, mc);
+        More.render(ctx, mc);
+        More2.render(ctx, mc);
+        More3.render(ctx, mc);
     }
 
     private static void key(DrawContext ctx, MinecraftClient mc, int x, int y, int w, String s, boolean down, int acc) {
@@ -159,7 +173,7 @@ public class AuroraVisuals implements ClientModInitializer {
         if (mc.options.hudHidden || !mc.options.getPerspective().isFirstPerson()) return;
         Config c = Config.I;
         int cx = ctx.getScaledWindowWidth() / 2, cy = ctx.getScaledWindowHeight() / 2;
-        int base = c.chRainbow ? c.accent() : 0xFFFFFF;
+        int base = c.chRainbow ? c.accent() : c.chCustom ? c.chRgb : 0xFFFFFF;
         if (c.chTargetColor && mc.targetedEntity != null) base = 0xFF4040;
         int col = (c.chAlpha << 24) | (base & 0xFFFFFF);
         int gap = c.chGap;

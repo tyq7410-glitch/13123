@@ -21,14 +21,18 @@ import java.util.Random;
 
 public class Extras {
     private static final Random R = new Random();
-    public static final String[] HIT_TYPES = {"Crit", "Accent dust", "Sparks", "Hearts"};
+    public static final String[] HIT_TYPES = {"Crit", "Accent dust", "Sparks", "Hearts", "Totem", "Notes", "Flames", "Electric"};
+    public static final String[] KILL_TYPES = {"Totem", "Firework", "Hearts", "Souls"};
     public static final String[] SOUNDS = {"Off", "Orb", "Ding", "Crit"};
-    public static final String[] COLORS = {"Theme", "Random", "White"};
+    public static final String[] COLORS = {"Theme", "Random", "White", "Custom"};
     public static final String[] SHAPES = {"Dust", "End rod", "Soul flame", "Sparkle", "Flame", "Cloud"};
     private static final long START = System.currentTimeMillis();
     private static int kills = 0, maxCombo = 0, lastLevel = -1;
     private static boolean wasGround = true;
-    public static int combo = 0;
+    public static int combo = 0, hits = 0;
+    public static double lastReach = 0;
+    private static Boolean savedBob = null;
+    private static Double savedFovFx = null;
     private static long lastHit = 0, lastDmgTime = 0;
     private static double lx, lz, speed;
     private static float spin = 0, lastHealth = 0, lastDmg = 0;
@@ -45,6 +49,7 @@ public class Extras {
         Config c = Config.I;
         if (c.pColor == 1) return Color.HSBtoRGB(R.nextFloat(), 0.7f, 1f);
         if (c.pColor == 2) return 0xFFFFFFFF;
+        if (c.pColor == 3) return 0xFF000000 | c.partRgb;
         return c.accent();
     }
     private static ParticleEffect dust(float size) {
@@ -55,6 +60,32 @@ public class Extras {
             case 4: return ParticleTypes.FLAME;
             case 5: return ParticleTypes.CLOUD;
             default: return new DustParticleEffect(col() & 0xFFFFFF, size);
+        }
+    }
+
+    public static long lastHitMs() { return lastHit; }
+    public static int killsTotal() { return kills; }
+    public static float lastDamage() { return lastDmg; }
+    public static long lastDamageMs() { return lastDmgTime; }
+
+    /** Puts back options this mod changed (zoom FOV, bobbing, sprint FOV) so the user's own settings are not lost. */
+    public static void restore(MinecraftClient mc) {
+        if (zooming) { mc.options.getFov().setValue(savedFov); zooming = false; }
+        if (savedBob != null) { mc.options.getBobView().setValue(savedBob); savedBob = null; }
+        if (savedFovFx != null) { mc.options.getFovEffectScale().setValue(savedFovFx); savedFovFx = null; }
+    }
+
+    public static float comboLeft() {
+        if (combo <= 0) return 0f;
+        return Math.max(0f, 1f - (System.currentTimeMillis() - lastHit) / 3000f);
+    }
+
+    private static ParticleEffect killParticle() {
+        switch (Config.I.killType) {
+            case 1: return ParticleTypes.FIREWORK;
+            case 2: return ParticleTypes.HEART;
+            case 3: return ParticleTypes.SOUL;
+            default: return ParticleTypes.TOTEM_OF_UNDYING;
         }
     }
 
@@ -91,13 +122,19 @@ public class Extras {
             lastTarget = le; lastHealth = le.getHealth();
         }
 
-        if (c.noBob && mc.options.getBobView().getValue()) mc.options.getBobView().setValue(false);
-        if (c.noFovFx && mc.options.getFovEffectScale().getValue() > 0) mc.options.getFovEffectScale().setValue(0.0);
+        if (c.noBob) {
+            if (savedBob == null) savedBob = mc.options.getBobView().getValue();
+            if (mc.options.getBobView().getValue()) mc.options.getBobView().setValue(false);
+        } else if (savedBob != null) { mc.options.getBobView().setValue(savedBob); savedBob = null; }
+        if (c.noFovFx) {
+            if (savedFovFx == null) savedFovFx = mc.options.getFovEffectScale().getValue();
+            if (mc.options.getFovEffectScale().getValue() > 0) mc.options.getFovEffectScale().setValue(0.0);
+        } else if (savedFovFx != null) { mc.options.getFovEffectScale().setValue(savedFovFx); savedFovFx = null; }
         if (lastTarget instanceof LivingEntity dead && dead.isDead()) {
             if (!killDone && System.currentTimeMillis() - lastHit < 5000) {
                 killDone = true; kills++;
                 if (c.killEffect) for (int i = 0; i < 30; i++)
-                    mc.world.addParticleClient(ParticleTypes.TOTEM_OF_UNDYING, dead.getX(), dead.getY() + dead.getHeight() / 2, dead.getZ(),
+                    mc.world.addParticleClient(killParticle(), dead.getX(), dead.getY() + dead.getHeight() / 2, dead.getZ(),
                         (R.nextDouble() - 0.5) * 0.5, R.nextDouble() * 0.4, (R.nextDouble() - 0.5) * 0.5);
             }
         } else killDone = false;
@@ -150,6 +187,28 @@ public class Extras {
         lastLevel = p.experienceLevel;
         if (c.fireflies && R.nextInt(3) == 0)
             mc.world.addParticleClient(ParticleTypes.END_ROD, p.getX() + (R.nextDouble() - 0.5) * 12, p.getY() + R.nextDouble() * 3, p.getZ() + (R.nextDouble() - 0.5) * 12, 0, 0.01, 0);
+        int ci = c.cosIntensity;
+        double headY = p.getY() + p.getHeight();
+        if (show) {
+            if (c.snow) for (int q = 0; q < ci * 2; q++)
+                mc.world.addParticleClient(ParticleTypes.SNOWFLAKE, p.getX() + (R.nextDouble() - 0.5) * 8, p.getY() + 2 + R.nextDouble() * 3, p.getZ() + (R.nextDouble() - 0.5) * 8, 0, -0.02, 0);
+            if (c.sakura) for (int q = 0; q < ci; q++)
+                mc.world.addParticleClient(ParticleTypes.CHERRY_LEAVES, p.getX() + (R.nextDouble() - 0.5) * 6, p.getY() + 2 + R.nextDouble() * 2, p.getZ() + (R.nextDouble() - 0.5) * 6, 0, -0.01, 0);
+            if (c.heartAura && R.nextInt(4) == 0) for (int q = 0; q < ci; q++)
+                mc.world.addParticleClient(ParticleTypes.HEART, p.getX() + (R.nextDouble() - 0.5), headY + 0.2 + R.nextDouble() * 0.3, p.getZ() + (R.nextDouble() - 0.5), 0, 0.02, 0);
+            if (c.notes && R.nextInt(3) == 0)
+                mc.world.addParticleClient(ParticleTypes.NOTE, p.getX() + (R.nextDouble() - 0.5), headY + 0.4, p.getZ() + (R.nextDouble() - 0.5), R.nextDouble(), 0, 0);
+            if (c.electric) for (int q = 0; q < ci; q++)
+                mc.world.addParticleClient(ParticleTypes.ELECTRIC_SPARK, p.getX() + (R.nextDouble() - 0.5), p.getY() + R.nextDouble() * 1.8, p.getZ() + (R.nextDouble() - 0.5), 0, 0, 0);
+            if (c.flameFeet && p.isSprinting()) for (int q = 0; q < ci; q++)
+                mc.world.addParticleClient(ParticleTypes.FLAME, p.getX() + (R.nextDouble() - 0.5) * 0.4, p.getY() + 0.05, p.getZ() + (R.nextDouble() - 0.5) * 0.4, 0, 0.02, 0);
+            if (c.souls && R.nextInt(2) == 0)
+                mc.world.addParticleClient(ParticleTypes.SOUL, p.getX() + (R.nextDouble() - 0.5) * 1.2, p.getY() + R.nextDouble() * 1.5, p.getZ() + (R.nextDouble() - 0.5) * 1.2, 0, 0.03, 0);
+            if (c.enchant) for (int q = 0; q < ci; q++)
+                mc.world.addParticleClient(ParticleTypes.ENCHANT, p.getX() + (R.nextDouble() - 0.5) * 1.6, headY + 0.3 + R.nextDouble() * 0.5, p.getZ() + (R.nextDouble() - 0.5) * 1.6, (R.nextDouble() - 0.5) * 0.4, -0.3, (R.nextDouble() - 0.5) * 0.4);
+            if (c.totemAura && R.nextInt(3) == 0)
+                mc.world.addParticleClient(ParticleTypes.TOTEM_OF_UNDYING, p.getX() + (R.nextDouble() - 0.5), p.getY() + R.nextDouble() * 1.8, p.getZ() + (R.nextDouble() - 0.5), 0, 0.05, 0);
+        }
         if (c.trail && (third || c.trailFirstPerson)) {
             for (int i = 0; i < c.trailDensity; i++)
                 mc.world.addParticleClient(dust(1f), p.getX() + (R.nextDouble() - 0.5) * 0.4, p.getY() + 0.1 + R.nextDouble() * 0.2,
@@ -191,6 +250,8 @@ public class Extras {
         combo++; lastHit = System.currentTimeMillis();
         combatUntil = lastHit + c.combatSecs * 1000L;
         maxCombo = Math.max(maxCombo, combo);
+        hits++;
+        if (mc.player != null) lastReach = mc.player.distanceTo(e);
         if (mc.world == null) return;
         SoundEvent snd = switch (c.hitSound) {
             case 1 -> SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP;
@@ -204,6 +265,10 @@ public class Extras {
             case 0 -> ParticleTypes.CRIT;
             case 2 -> ParticleTypes.END_ROD;
             case 3 -> ParticleTypes.HEART;
+            case 4 -> ParticleTypes.TOTEM_OF_UNDYING;
+            case 5 -> ParticleTypes.NOTE;
+            case 6 -> ParticleTypes.FLAME;
+            case 7 -> ParticleTypes.ELECTRIC_SPARK;
             default -> dust(1.2f);
         };
         double y = e.getY() + e.getHeight() / 2;

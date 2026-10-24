@@ -30,8 +30,8 @@ public class HudEditorScreen extends Screen {
     public void render(DrawContext ctx, int mx, int my, float delta) {
         super.render(ctx, mx, my, delta);
         Config c = Config.I;
-        Config.Pos[] ps = {c.pPanel, c.pKeys, c.pArmor, c.pPot, c.pTarget, c.pCd};
-        String[] names = {"Info panel", "Keystrokes", "Armor", "Potions", "Target", "Cooldowns"};
+        Config.Pos[] ps = {c.pPanel, c.pKeys, c.pArmor, c.pPot, c.pTarget, c.pCd, c.pGraph};
+        String[] names = {"Info panel", "Keystrokes", "Armor", "Potions", "Target", "Cooldowns", "FPS graph"};
 
         boolean down = client != null && GLFW.glfwGetMouseButton(client.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         if (down && !wasDown && my < height - 34) {
