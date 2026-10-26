@@ -83,7 +83,7 @@ public class More3 {
     public static void renderBack(DrawContext ctx, MinecraftClient mc) {
         if (mc.player == null || mc.options.hudHidden) return;
         long age = System.currentTimeMillis() - flashAt;
-        if (on("killFlash") && flashAt > 0 && age < 350)
+        if (on("killFlash") && !Config.I.calm && flashAt > 0 && age < 350)
             ctx.fill(0, 0, ctx.getScaledWindowWidth(), ctx.getScaledWindowHeight(), ((int) (110 * (1 - age / 350.0)) << 24) | rgb("killFlash"));
     }
 
@@ -124,7 +124,7 @@ public class More3 {
             for (EquipmentSlot sl : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
                 ItemStack a = p.getEquippedStack(sl);
                 if (!a.isEmpty() && a.isDamageable() && (a.getMaxDamage() - a.getDamage()) < a.getMaxDamage() * pct) {
-                    al.add("ARMOR LOW"); alc.add(0xFFFF5555); break;
+                    al.add("ARMOR LOW"); alc.add(Config.bad()); break;
                 }
             }
         }
@@ -140,9 +140,9 @@ public class More3 {
         if (on("pingWarn")) {
             PlayerListEntry pe = mc.getNetworkHandler() == null ? null : mc.getNetworkHandler().getPlayerListEntry(p.getUuid());
             int ping = pe == null ? 0 : pe.getLatency();
-            if (ping > Config.num("pingMs", 200f)) { al.add("HIGH PING " + ping + " ms"); alc.add(0xFFFF5555); }
+            if (ping > Config.num("pingMs", 200f)) { al.add("HIGH PING " + ping + " ms"); alc.add(Config.bad()); }
         }
-        if (!al.isEmpty() && (now / 400) % 2 == 0) {
+        if (!al.isEmpty() && (Config.I.calm || (now / 400) % 2 == 0)) {
             int ay = 24;
             for (int i = 0; i < al.size(); i++) {
                 ctx.drawText(mc.textRenderer, al.get(i), (sw - mc.textRenderer.getWidth(al.get(i))) / 2, ay, alc.get(i), true);

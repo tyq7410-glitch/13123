@@ -102,13 +102,14 @@ public class Extras {
         lastTotems = totems;
         for (int i = 0; i < CD_ITEMS.length; i++) {
             float pr = p.getItemCooldownManager().getCooldownProgress(new ItemStack(CD_ITEMS[i]), 0f);
-            if (cdPrev[i] > 0 && pr <= 0 && c.cdReady)
-                mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 1.5f, 0.6f));
+            if (cdPrev[i] > 0 && pr <= 0 && c.cdReady && !c.quiet)
+                mc.getSoundManager().play(PositionedSoundInstance.ui(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 1.5f, 0.6f));
             cdPrev[i] = pr; cdProg[i] = pr;
         }
         if (combo > 0 && System.currentTimeMillis() - lastHit > 3000) combo = 0;
-        boolean third = !mc.options.getPerspective().isFirstPerson();
-        boolean show = third || c.cosFirst;
+        boolean fxOn = Perf.ok();
+        boolean third = fxOn && !mc.options.getPerspective().isFirstPerson();
+        boolean show = fxOn && (third || c.cosFirst);
 
         // zoom
         if (AuroraVisuals.zoomKey != null && AuroraVisuals.zoomKey.isPressed()) {
@@ -134,12 +135,12 @@ public class Extras {
             if (!killDone && System.currentTimeMillis() - lastHit < 5000) {
                 killDone = true; kills++;
                 if (c.killEffect) for (int i = 0; i < 30; i++)
-                    mc.world.addParticleClient(killParticle(), dead.getX(), dead.getY() + dead.getHeight() / 2, dead.getZ(),
+                    mc.particleManager.addParticle(killParticle(), dead.getX(), dead.getY() + dead.getHeight() / 2, dead.getZ(),
                         (R.nextDouble() - 0.5) * 0.5, R.nextDouble() * 0.4, (R.nextDouble() - 0.5) * 0.5);
             }
         } else killDone = false;
 
-        spin += 0.12f * c.auraSpeed;
+        spin += 0.12f * c.auraSpeed * (c.reducedMotion ? 0.4f : 1f);
         if (c.wings && show) {
             double yaw = Math.toRadians(p.getBodyYaw());
             double fx = -Math.sin(yaw), fz = Math.cos(yaw), rx = -Math.cos(yaw), rz = -Math.sin(yaw);
@@ -150,72 +151,72 @@ public class Extras {
                     double lat = (0.2 + t * 1.1 * c.wingSize) * flap * side;
                     double y = p.getY() + 1.3 + Math.sin(t * Math.PI * 0.9) * 0.6 * c.wingSize - t * 0.5;
                     double back = -(0.25 + t * 0.35);
-                    mc.world.addParticleClient(dust(0.6f), p.getX() + fx * back + rx * lat, y, p.getZ() + fz * back + rz * lat, 0, 0, 0);
+                    mc.particleManager.addParticle(dust(0.6f), p.getX() + fx * back + rx * lat, y, p.getZ() + fz * back + rz * lat, 0, 0, 0);
                 }
         }
         if (c.ring && show) {
             double y = p.getY() + 0.9;
             for (int k = 0; k < 20; k++) {
                 double a = Math.PI * 2 * k / 20 + spin * 0.5;
-                mc.world.addParticleClient(dust(0.5f), p.getX() + Math.cos(a) * c.ringRadius, y + Math.sin(spin * 2 + k * 0.3) * 0.1, p.getZ() + Math.sin(a) * c.ringRadius, 0, 0, 0);
+                mc.particleManager.addParticle(dust(0.5f), p.getX() + Math.cos(a) * c.ringRadius, y + Math.sin(spin * 2 + k * 0.3) * 0.1, p.getZ() + Math.sin(a) * c.ringRadius, 0, 0, 0);
             }
         }
         if (c.helix && show) {
             for (int k = 0; k < 12; k++) {
                 double t = k / 12.0, a = t * Math.PI * 4 + spin;
-                mc.world.addParticleClient(dust(0.5f), p.getX() + Math.cos(a) * 0.6, p.getY() + t * 2.0, p.getZ() + Math.sin(a) * 0.6, 0, 0, 0);
+                mc.particleManager.addParticle(dust(0.5f), p.getX() + Math.cos(a) * 0.6, p.getY() + t * 2.0, p.getZ() + Math.sin(a) * 0.6, 0, 0, 0);
             }
         }
         if (c.cloud && show) {
             double cy = p.getY() + p.getHeight() + 0.9;
             for (int k = 0; k < 2; k++) {
                 double ox = (R.nextDouble() - 0.5) * 0.8, oz = (R.nextDouble() - 0.5) * 0.8;
-                mc.world.addParticleClient(ParticleTypes.CLOUD, p.getX() + ox, cy, p.getZ() + oz, 0, 0, 0);
-                mc.world.addParticleClient(ParticleTypes.FALLING_WATER, p.getX() + ox, cy - 0.1, p.getZ() + oz, 0, 0, 0);
+                mc.particleManager.addParticle(ParticleTypes.CLOUD, p.getX() + ox, cy, p.getZ() + oz, 0, 0, 0);
+                mc.particleManager.addParticle(ParticleTypes.FALLING_WATER, p.getX() + ox, cy - 0.1, p.getZ() + oz, 0, 0, 0);
             }
         }
         if (c.jumpRings && wasGround && !p.isOnGround() && p.getVelocity().y > 0.2 && show) {
             for (int k = 0; k < 24; k++) {
                 double a = Math.PI * 2 * k / 24;
-                mc.world.addParticleClient(dust(0.8f), p.getX() + Math.cos(a) * 0.7, p.getY() + 0.05, p.getZ() + Math.sin(a) * 0.7, Math.cos(a) * 0.1, 0.02, Math.sin(a) * 0.1);
+                mc.particleManager.addParticle(dust(0.8f), p.getX() + Math.cos(a) * 0.7, p.getY() + 0.05, p.getZ() + Math.sin(a) * 0.7, Math.cos(a) * 0.1, 0.02, Math.sin(a) * 0.1);
             }
         }
         wasGround = p.isOnGround();
         if (lastLevel >= 0 && p.experienceLevel > lastLevel && c.lvlBurst)
             for (int k = 0; k < 40; k++)
-                mc.world.addParticleClient(ParticleTypes.FIREWORK, p.getX(), p.getY() + 1, p.getZ(), (R.nextDouble() - 0.5) * 0.4, R.nextDouble() * 0.3, (R.nextDouble() - 0.5) * 0.4);
+                mc.particleManager.addParticle(ParticleTypes.FIREWORK, p.getX(), p.getY() + 1, p.getZ(), (R.nextDouble() - 0.5) * 0.4, R.nextDouble() * 0.3, (R.nextDouble() - 0.5) * 0.4);
         lastLevel = p.experienceLevel;
-        if (c.fireflies && R.nextInt(3) == 0)
-            mc.world.addParticleClient(ParticleTypes.END_ROD, p.getX() + (R.nextDouble() - 0.5) * 12, p.getY() + R.nextDouble() * 3, p.getZ() + (R.nextDouble() - 0.5) * 12, 0, 0.01, 0);
+        if (c.fireflies && fxOn && R.nextInt(3) == 0)
+            mc.particleManager.addParticle(ParticleTypes.END_ROD, p.getX() + (R.nextDouble() - 0.5) * 12, p.getY() + R.nextDouble() * 3, p.getZ() + (R.nextDouble() - 0.5) * 12, 0, 0.01, 0);
         int ci = c.cosIntensity;
         double headY = p.getY() + p.getHeight();
         if (show) {
             if (c.snow) for (int q = 0; q < ci * 2; q++)
-                mc.world.addParticleClient(ParticleTypes.SNOWFLAKE, p.getX() + (R.nextDouble() - 0.5) * 8, p.getY() + 2 + R.nextDouble() * 3, p.getZ() + (R.nextDouble() - 0.5) * 8, 0, -0.02, 0);
+                mc.particleManager.addParticle(ParticleTypes.SNOWFLAKE, p.getX() + (R.nextDouble() - 0.5) * 8, p.getY() + 2 + R.nextDouble() * 3, p.getZ() + (R.nextDouble() - 0.5) * 8, 0, -0.02, 0);
             if (c.sakura) for (int q = 0; q < ci; q++)
-                mc.world.addParticleClient(ParticleTypes.CHERRY_LEAVES, p.getX() + (R.nextDouble() - 0.5) * 6, p.getY() + 2 + R.nextDouble() * 2, p.getZ() + (R.nextDouble() - 0.5) * 6, 0, -0.01, 0);
+                mc.particleManager.addParticle(ParticleTypes.CHERRY_LEAVES, p.getX() + (R.nextDouble() - 0.5) * 6, p.getY() + 2 + R.nextDouble() * 2, p.getZ() + (R.nextDouble() - 0.5) * 6, 0, -0.01, 0);
             if (c.heartAura && R.nextInt(4) == 0) for (int q = 0; q < ci; q++)
-                mc.world.addParticleClient(ParticleTypes.HEART, p.getX() + (R.nextDouble() - 0.5), headY + 0.2 + R.nextDouble() * 0.3, p.getZ() + (R.nextDouble() - 0.5), 0, 0.02, 0);
+                mc.particleManager.addParticle(ParticleTypes.HEART, p.getX() + (R.nextDouble() - 0.5), headY + 0.2 + R.nextDouble() * 0.3, p.getZ() + (R.nextDouble() - 0.5), 0, 0.02, 0);
             if (c.notes && R.nextInt(3) == 0)
-                mc.world.addParticleClient(ParticleTypes.NOTE, p.getX() + (R.nextDouble() - 0.5), headY + 0.4, p.getZ() + (R.nextDouble() - 0.5), R.nextDouble(), 0, 0);
+                mc.particleManager.addParticle(ParticleTypes.NOTE, p.getX() + (R.nextDouble() - 0.5), headY + 0.4, p.getZ() + (R.nextDouble() - 0.5), R.nextDouble(), 0, 0);
             if (c.electric) for (int q = 0; q < ci; q++)
-                mc.world.addParticleClient(ParticleTypes.ELECTRIC_SPARK, p.getX() + (R.nextDouble() - 0.5), p.getY() + R.nextDouble() * 1.8, p.getZ() + (R.nextDouble() - 0.5), 0, 0, 0);
+                mc.particleManager.addParticle(ParticleTypes.ELECTRIC_SPARK, p.getX() + (R.nextDouble() - 0.5), p.getY() + R.nextDouble() * 1.8, p.getZ() + (R.nextDouble() - 0.5), 0, 0, 0);
             if (c.flameFeet && p.isSprinting()) for (int q = 0; q < ci; q++)
-                mc.world.addParticleClient(ParticleTypes.FLAME, p.getX() + (R.nextDouble() - 0.5) * 0.4, p.getY() + 0.05, p.getZ() + (R.nextDouble() - 0.5) * 0.4, 0, 0.02, 0);
+                mc.particleManager.addParticle(ParticleTypes.FLAME, p.getX() + (R.nextDouble() - 0.5) * 0.4, p.getY() + 0.05, p.getZ() + (R.nextDouble() - 0.5) * 0.4, 0, 0.02, 0);
             if (c.souls && R.nextInt(2) == 0)
-                mc.world.addParticleClient(ParticleTypes.SOUL, p.getX() + (R.nextDouble() - 0.5) * 1.2, p.getY() + R.nextDouble() * 1.5, p.getZ() + (R.nextDouble() - 0.5) * 1.2, 0, 0.03, 0);
+                mc.particleManager.addParticle(ParticleTypes.SOUL, p.getX() + (R.nextDouble() - 0.5) * 1.2, p.getY() + R.nextDouble() * 1.5, p.getZ() + (R.nextDouble() - 0.5) * 1.2, 0, 0.03, 0);
             if (c.enchant) for (int q = 0; q < ci; q++)
-                mc.world.addParticleClient(ParticleTypes.ENCHANT, p.getX() + (R.nextDouble() - 0.5) * 1.6, headY + 0.3 + R.nextDouble() * 0.5, p.getZ() + (R.nextDouble() - 0.5) * 1.6, (R.nextDouble() - 0.5) * 0.4, -0.3, (R.nextDouble() - 0.5) * 0.4);
+                mc.particleManager.addParticle(ParticleTypes.ENCHANT, p.getX() + (R.nextDouble() - 0.5) * 1.6, headY + 0.3 + R.nextDouble() * 0.5, p.getZ() + (R.nextDouble() - 0.5) * 1.6, (R.nextDouble() - 0.5) * 0.4, -0.3, (R.nextDouble() - 0.5) * 0.4);
             if (c.totemAura && R.nextInt(3) == 0)
-                mc.world.addParticleClient(ParticleTypes.TOTEM_OF_UNDYING, p.getX() + (R.nextDouble() - 0.5), p.getY() + R.nextDouble() * 1.8, p.getZ() + (R.nextDouble() - 0.5), 0, 0.05, 0);
+                mc.particleManager.addParticle(ParticleTypes.TOTEM_OF_UNDYING, p.getX() + (R.nextDouble() - 0.5), p.getY() + R.nextDouble() * 1.8, p.getZ() + (R.nextDouble() - 0.5), 0, 0.05, 0);
         }
-        if (c.trail && (third || c.trailFirstPerson)) {
+        if (c.trail && fxOn && (third || c.trailFirstPerson)) {
             for (int i = 0; i < c.trailDensity; i++)
-                mc.world.addParticleClient(dust(1f), p.getX() + (R.nextDouble() - 0.5) * 0.4, p.getY() + 0.1 + R.nextDouble() * 0.2,
+                mc.particleManager.addParticle(dust(1f), p.getX() + (R.nextDouble() - 0.5) * 0.4, p.getY() + 0.1 + R.nextDouble() * 0.2,
                     p.getZ() + (R.nextDouble() - 0.5) * 0.4, 0, 0, 0);
         }
-        if (c.footsteps && p.isOnGround() && speed > 1.0) {
-            mc.world.addParticleClient(dust(0.8f), p.getX() + (R.nextDouble() - 0.5) * 0.3, p.getY() + 0.05, p.getZ() + (R.nextDouble() - 0.5) * 0.3, 0, 0, 0);
+        if (c.footsteps && fxOn && p.isOnGround() && speed > 1.0) {
+            mc.particleManager.addParticle(dust(0.8f), p.getX() + (R.nextDouble() - 0.5) * 0.3, p.getY() + 0.05, p.getZ() + (R.nextDouble() - 0.5) * 0.3, 0, 0, 0);
         }
         if (c.hat && show) {
             double top = p.getY() + p.getHeight() + c.hatHeight;
@@ -224,7 +225,7 @@ public class Extras {
                 int pts = Math.max(4, (int) (c.hatPoints * (1.0 - level / 3.0)));
                 for (int k = 0; k < pts; k++) {
                     double a = Math.PI * 2 * k / pts + spin;
-                    mc.world.addParticleClient(dust(0.6f), p.getX() + Math.cos(a) * r, top - level * 0.12, p.getZ() + Math.sin(a) * r, 0, 0, 0);
+                    mc.particleManager.addParticle(dust(0.6f), p.getX() + Math.cos(a) * r, top - level * 0.12, p.getZ() + Math.sin(a) * r, 0, 0, 0);
                 }
             }
         }
@@ -232,14 +233,14 @@ public class Extras {
             double y = p.getY() + p.getHeight() + c.haloHeight;
             for (int k = 0; k < 18; k++) {
                 double a = Math.PI * 2 * k / 18;
-                mc.world.addParticleClient(dust(0.5f), p.getX() + Math.cos(a) * c.haloSize, y, p.getZ() + Math.sin(a) * c.haloSize, 0, 0, 0);
+                mc.particleManager.addParticle(dust(0.5f), p.getX() + Math.cos(a) * c.haloSize, y, p.getZ() + Math.sin(a) * c.haloSize, 0, 0, 0);
             }
         }
         if (c.aura && show) {
             for (int k = 0; k < c.auraCount; k++) {
                 double a = spin + Math.PI * 2 * k / c.auraCount;
                 double y = p.getY() + 0.9 + Math.sin(spin * 1.5 + k) * 0.8;
-                mc.world.addParticleClient(dust(0.7f), p.getX() + Math.cos(a) * c.auraRadius, y, p.getZ() + Math.sin(a) * c.auraRadius, 0, 0, 0);
+                mc.particleManager.addParticle(dust(0.7f), p.getX() + Math.cos(a) * c.auraRadius, y, p.getZ() + Math.sin(a) * c.auraRadius, 0, 0, 0);
             }
         }
     }
@@ -259,8 +260,8 @@ public class Extras {
             case 3 -> SoundEvents.ENTITY_PLAYER_ATTACK_CRIT;
             default -> null;
         };
-        if (snd != null) mc.getSoundManager().play(PositionedSoundInstance.master(snd, 1.2f, 0.8f));
-        if (!c.hitParticles) return;
+        if (snd != null && !c.quiet) mc.getSoundManager().play(PositionedSoundInstance.ui(snd, 1.2f, 0.8f));
+        if (!c.hitParticles || !Perf.ok()) return;
         ParticleEffect type = switch (c.hitType) {
             case 0 -> ParticleTypes.CRIT;
             case 2 -> ParticleTypes.END_ROD;
@@ -273,7 +274,7 @@ public class Extras {
         };
         double y = e.getY() + e.getHeight() / 2;
         for (int i = 0; i < c.hitCount; i++)
-            mc.world.addParticleClient(type, e.getX() + (R.nextDouble() - 0.5) * 0.6, y + (R.nextDouble() - 0.5) * 0.6,
+            mc.particleManager.addParticle(type, e.getX() + (R.nextDouble() - 0.5) * 0.6, y + (R.nextDouble() - 0.5) * 0.6,
                 e.getZ() + (R.nextDouble() - 0.5) * 0.6, (R.nextDouble() - 0.5) * 0.2, R.nextDouble() * 0.15, (R.nextDouble() - 0.5) * 0.2);
     }
 
@@ -285,7 +286,7 @@ public class Extras {
         if (c.state) lines.add(p.isSneaking() ? "Sneaking" : p.isSprinting() ? "Sprinting" : "Walking");
         if (c.clock) lines.add("Time: " + java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
         if (c.memory) { Runtime r = Runtime.getRuntime(); lines.add("RAM: " + (r.totalMemory() - r.freeMemory()) / 1048576 + " MB"); }
-        if (c.server) lines.add(mc.getCurrentServerEntry() != null ? mc.getCurrentServerEntry().address : "Singleplayer");
+        if (c.server) lines.add(mc.getCurrentServerEntry() != null ? "IP: " + mc.getCurrentServerEntry().address : "Singleplayer");
         if (c.itemCount) {
             lines.add("Totems: " + p.getInventory().count(Items.TOTEM_OF_UNDYING));
             lines.add("Gapples: " + p.getInventory().count(Items.GOLDEN_APPLE));
@@ -339,7 +340,7 @@ public class Extras {
                     {
                     int left = st.getMaxDamage() - st.getDamage();
                     boolean low = left < st.getMaxDamage() * 0.15;
-                    ctx.drawText(mc.textRenderer, String.valueOf(left), 5, y + 4, low ? 0xFFFF5555 : c.textCol(), c.textShadow);
+                    ctx.drawText(mc.textRenderer, String.valueOf(left), 5, y + 4, low ? Config.bad() : c.textCol(), c.textShadow);
                 }
             }
             AuroraVisuals.end(ctx);
@@ -370,7 +371,7 @@ public class Extras {
             AuroraVisuals.panel(ctx, 0, 0, bw, bh, acc);
             ctx.drawText(mc.textRenderer, le.getName().getString(), 6, 3, c.textCol(), c.textShadow);
             if (System.currentTimeMillis() - lastDmgTime < 2000 && le == lastTarget)
-                ctx.drawText(mc.textRenderer, String.format("-%.1f", lastDmg), bw - 32, 3, 0xFFFF5555, c.textShadow);
+                ctx.drawText(mc.textRenderer, String.format("-%.1f", lastDmg), bw - 32, 3, Config.bad(), c.textShadow);
             float pct = Math.max(0f, Math.min(1f, le.getHealth() / le.getMaxHealth()));
             ctx.fill(6, 16, bw - 6, 22, 0x80000000);
             ctx.fill(6, 16, 6 + (int) ((bw - 12) * pct), 22, acc);
@@ -402,13 +403,13 @@ public class Extras {
             c.pCd.w = 72 * sc; c.pCd.h = Math.max(1, rows) * 20 * sc;
         }
         if (c.lowHp && p.getHealth() <= c.lowHpThreshold && p.isAlive()) {
-            int a = (int) (70 + 60 * Math.sin(System.currentTimeMillis() / 150.0));
-            int col = (a << 24) | 0xFF2020;
+            int a = c.calm ? 90 : (int) (70 + 60 * Math.sin(System.currentTimeMillis() / 150.0));
+            int col = (a << 24) | (c.colorblind ? 0xFFA500 : 0xFF2020);
             int t = 8;
             ctx.fill(0, 0, sw, t, col); ctx.fill(0, sh - t, sw, sh, col);
             ctx.fill(0, t, t, sh - t, col); ctx.fill(sw - t, t, sw, sh - t, col);
         }
-        if (c.hurtFlash && p.hurtTime > 0) ctx.fill(0, 0, sw, sh, (Math.min(120, 30 + p.hurtTime * 9) << 24) | 0xFF2020);
+        if (c.hurtFlash && !c.calm && p.hurtTime > 0) ctx.fill(0, 0, sw, sh, (Math.min(120, 30 + p.hurtTime * 9) << 24) | (c.colorblind ? 0xFFA500 : 0xFF2020));
         if (c.frame) {
             int a = 0xA0000000 | (acc & 0xFFFFFF), ft = c.frameThick;
             ctx.fill(0, 0, sw, ft, a); ctx.fill(0, sh - ft, sw, sh, a);

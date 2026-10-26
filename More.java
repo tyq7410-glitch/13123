@@ -26,10 +26,10 @@ public class More {
     static int rgb(String k, int d) { return Config.rgb(k, d) & 0xFFFFFF; }
 
     static void d(MinecraftClient mc, String k, int def, double x, double y, double z, float size) {
-        mc.world.addParticleClient(new DustParticleEffect(rgb(k, def), size), x, y, z, 0, 0, 0);
+        mc.particleManager.addParticle(new DustParticleEffect(rgb(k, def), size), x, y, z, 0, 0, 0);
     }
     static void pt(MinecraftClient mc, ParticleEffect e, double x, double y, double z, double vx, double vy, double vz) {
-        mc.world.addParticleClient(e, x, y, z, vx, vy, vz);
+        mc.particleManager.addParticle(e, x, y, z, vx, vy, vz);
     }
 
     public static void tick(MinecraftClient mc) {
@@ -37,7 +37,7 @@ public class More {
         var p = mc.player;
         Config c = Config.I;
         ticks++;
-        t += 0.1f * Config.num("cosSpeed", 1f);
+        t += 0.1f * Config.num("cosSpeed", 1f) * (Config.I.reducedMotion ? 0.4f : 1f);
         float sc = Config.num("cosScale", 1f);
         spd = Math.hypot(p.getX() - lx, p.getZ() - lz) * 20; lx = p.getX(); lz = p.getZ();
         float hp = p.getHealth();
@@ -47,7 +47,7 @@ public class More {
             System.arraycopy(fpsHist, 1, fpsHist, 0, fpsHist.length - 1);
             fpsHist[fpsHist.length - 1] = mc.getCurrentFps();
         }
-        if (mc.options.getPerspective().isFirstPerson() && !c.cosFirst) return;
+        if (!Perf.ok() || (mc.options.getPerspective().isFirstPerson() && !c.cosFirst)) return;
 
         double x = p.getX(), y = p.getY(), z = p.getZ(), top = y + p.getHeight();
         double yaw = Math.toRadians(p.getBodyYaw());
@@ -178,7 +178,7 @@ public class More {
             long tt = mc.world.getTimeOfDay() % 24000;
             lines.add("Phase: " + (tt < 12000 ? "Day" : tt < 13000 ? "Dusk" : tt < 23000 ? "Night" : "Dawn"));
         }
-        if (on("moonPhase")) lines.add("Moon: " + (mc.world.getMoonPhase() + 1) + "/8");
+        if (on("moonPhase")) lines.add("Moon: " + ((mc.world.getTimeOfDay() / 24000L) % 8 + 1) + "/8");
         if (on("lookBlock") && mc.crosshairTarget instanceof BlockHitResult b && b.getType() == HitResult.Type.BLOCK)
             lines.add("Looking: " + mc.world.getBlockState(b.getBlockPos()).getBlock().getName().getString());
         if (on("weather")) lines.add("Weather: " + (mc.world.isThundering() ? "Storm" : mc.world.isRaining() ? "Rain" : "Clear"));
@@ -217,7 +217,7 @@ public class More {
             ctx.fill(sw - 4 - L, sh - 4 - T, sw - 4, sh - 4, col); ctx.fill(sw - 4 - T, sh - 4 - L, sw - 4, sh - 4, col);
         }
         if (on("pulseFrame")) {
-            int a = (int) (60 + 60 * Math.sin(now / 300.0)), col = (a << 24) | rgb("pulseFrame", 0xFF4DDB), th = 4;
+            int a = Config.I.calm ? 80 : (int) (60 + 60 * Math.sin(now / 300.0)), col = (a << 24) | rgb("pulseFrame", 0xFF4DDB), th = 4;
             ctx.fill(0, 0, sw, th, col); ctx.fill(0, sh - th, sw, sh, col);
             ctx.fill(0, th, th, sh - th, col); ctx.fill(sw - th, th, sw, sh - th, col);
         }

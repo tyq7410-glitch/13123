@@ -1,12 +1,16 @@
 # Aurora Visuals
-Client-side Fabric visuals mod for Minecraft 1.21.11. Menu: Right Shift. Zoom: C.
 
-## Get the jar via GitHub (no local setup)
-1. Create a new GitHub repo, upload ALL files from this folder (keep the `.github` folder).
-2. Open the **Actions** tab -> run **build** (or it starts on push).
-3. When it is green, open the run -> **Artifacts** -> download `aurora-visuals`, unzip, take `aurora-visuals-1.0.0.jar` (not `-sources`).
-4. Put the jar and Fabric API into `.minecraft/mods`.
+Клієнтський Fabric-мод для Minecraft **1.21.11**: HUD, приціл, PvP-візуали та косметика з палітрою кольорів.
+Усе працює тільки на твоєму клієнті, нічого не змінює для інших гравців.
 
-Tag `v1.0.0` on the repo to get the jar published under Releases automatically.
+**Клавіші:** Right Shift = меню, C = зум (утримувати), End = «паніка» (миттєво сховати весь мод і повернути), "Copy coords" призначається в Controls.
 
-Keys: Right Shift = menu, C = zoom, 'Copy coords' key can be bound in Controls.
+**Захист:** FPS guard сам ставить косметику на паузу при низькому FPS; помилка в окремій функції не вилітає з гри, а пропускається і пишеться в лог один раз.
+
+Повна інструкція зі збірки через GitHub: **GITHUB_INSTRUCTIONS_UA.md**
+
+**Комфорт і доступність:** режим для дальтоніків, без мигання, високий контраст, менше руху, режим стримера, тихий режим, компактний HUD, підказка при вході, ховати HUD у чаті, тримати HUD в межах екрана, авто-зменшення HUD, окремі клавіші для HUD і ефектів (Controls), швидкий профіль Comfort і обмін конфігом через буфер обміну.
+
+**Менеджер конфігів:** головне меню -> Configs. Збереження під ім'ям, завантаження, видалення, Copy/Paste через буфер обміну (щоб поділитися з другом).
+
+**Меню (Right Shift):** бокова панель категорій, пошук (працює і російською), плавне прокручування (колесо або стрілки), повзунки, палітра кольорів, підказка російською внизу при наведенні. Розділ «Profiles and tools»: швидкі профілі, слоти, редактор HUD, менеджер конфігів, скидання.

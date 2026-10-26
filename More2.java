@@ -62,7 +62,7 @@ public class More2 {
         hist.addFirst(new double[]{x, y, z});
         while (hist.size() > 30) hist.pollLast();
 
-        if (mc.options.getPerspective().isFirstPerson() && !c.cosFirst) return;
+        if (!Perf.ok() || (mc.options.getPerspective().isFirstPerson() && !c.cosFirst)) return;
 
         // ---- cosmetics
         float t = More.t;
@@ -259,7 +259,9 @@ public class More2 {
         }
         if (on("hpGlow")) {
             float f = Math.max(0f, Math.min(1f, p.getHealth() / p.getMaxHealth()));
-            int cc = (90 << 24) | ((int) (255 * (1 - f)) << 16) | ((int) (255 * f) << 8), th = 3;
+            int cc = Config.I.colorblind
+                ? (90 << 24) | ((int) (255 * (1 - f) + 77 * f) << 16) | (165 << 8) | (int) (255 * f)
+                : (90 << 24) | ((int) (255 * (1 - f)) << 16) | ((int) (255 * f) << 8), th = 3;
             ctx.fill(0, 0, sw, th, cc); ctx.fill(0, sh - th, sw, sh, cc);
             ctx.fill(0, th, th, sh - th, cc); ctx.fill(sw - th, th, sw, sh - th, cc);
         }

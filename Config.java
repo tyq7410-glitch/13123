@@ -43,6 +43,12 @@ public class Config {
     public static boolean on(String k) { Boolean b = I.on.get(k); return b != null && b; }
     public static int rgb(String k, int d) { Integer v = I.rgb.get(k); return v == null ? d : v; }
     public static float num(String k, float d) { Float v = I.num.get(k); return v == null ? d : v; }
+    // comfort / accessibility
+    public boolean colorblind = false, calm = false, highContrast = false, reducedMotion = false, streamer = false,
+                   quiet = false, compact = false, welcomeHint = true, hideInChat = true, keepOnScreen = true, autoShrink = true;
+    // safety
+    public boolean perfGuard = true;
+    public int perfMinFps = 40;
     // cosmetics 3
     public boolean snow = false, heartAura = false, notes = false, electric = false, flameFeet = false,
                    souls = false, sakura = false, enchant = false, totemAura = false;
@@ -88,8 +94,10 @@ public class Config {
         if (rainbow) h += (System.currentTimeMillis() % 10000L) / 10000f * rainbowSpeed * 3f;
         return Color.HSBtoRGB(h % 1f, 0.65f, 1f) | 0xFF000000;
     }
-    public int bg() { return (bgOpacity << 24); }
-    public int textCol() { return textMode == 1 ? accent() : 0xFFFFFFFF; }
+    public int bg() { return ((highContrast ? Math.max(bgOpacity, 200) : bgOpacity) << 24); }
+    public static int good() { return I.colorblind ? 0xFF4DA6FF : 0xFF55FF55; }
+    public static int bad() { return I.colorblind ? 0xFFFFA500 : 0xFFFF5555; }
+    public int textCol() { return (textMode == 1 && !highContrast) ? accent() : 0xFFFFFFFF; }
     public static void applyPreset(int i) {
         float[] hues = {0.58f, 0.04f, 0.42f, 0.75f, 0.92f};
         I.preset = i;
@@ -106,6 +114,10 @@ public class Config {
         n.hue = o.hue; n.rainbow = o.rainbow; n.rainbowSpeed = o.rainbowSpeed; n.bgOpacity = o.bgOpacity; n.preset = o.preset;
         n.accentCustom = o.accentCustom; n.accentRgb = o.accentRgb; n.chCustom = o.chCustom; n.chRgb = o.chRgb; n.partRgb = o.partRgb;
         n.hudScale = o.hudScale; n.textShadow = o.textShadow; n.textMode = o.textMode;
+        n.colorblind = o.colorblind; n.calm = o.calm; n.highContrast = o.highContrast; n.reducedMotion = o.reducedMotion;
+        n.streamer = o.streamer; n.quiet = o.quiet; n.compact = o.compact; n.welcomeHint = o.welcomeHint;
+        n.hideInChat = o.hideInChat; n.keepOnScreen = o.keepOnScreen; n.autoShrink = o.autoShrink;
+        n.perfGuard = o.perfGuard; n.perfMinFps = o.perfMinFps;
         n.pPanel = o.pPanel; n.pKeys = o.pKeys; n.pArmor = o.pArmor; n.pPot = o.pPot; n.pTarget = o.pTarget; n.pCd = o.pCd; n.pGraph = o.pGraph; n.rgb = o.rgb; n.num = o.num;
     }
 
@@ -133,13 +145,63 @@ public class Config {
             if (!Files.exists(slot(n))) return false;
             Config c = GSON.fromJson(Files.readString(slot(n)), Config.class);
             if (c == null) return false;
-            I = c; save(); return true;
+            c.sanitize(); I = c; save(); return true;
         } catch (Exception e) { return false; }
+    }
+
+    /** One-click comfortable settings for people who are sensitive to flashing, motion or low contrast. */
+    public static void applyComfort() {
+        I.calm = true; I.reducedMotion = true; I.highContrast = true; I.compact = true;
+        I.hideInChat = true; I.keepOnScreen = true; I.autoShrink = true; I.perfGuard = true;
+        I.cosIntensity = 1; I.hurtFlash = false; I.frame = false;
+        save();
+    }
+
+    public static String toJson() { return GSON.toJson(I); }
+
+    /** Replaces the current config with the given JSON. Returns false if it is not a valid config. */
+    public static boolean applyJson(String json) {
+        try {
+            Config c = GSON.fromJson(json, Config.class);
+            if (c == null) return false;
+            c.sanitize();
+            I = c;
+            save();
+            return true;
+        } catch (Exception e) { return false; }
+    }
+
+    private static int ci(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
+    private static float cf(float v, float lo, float hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    /** Repairs missing or out-of-range values (e.g. from a hand-edited or old config file). */
+    public void sanitize() {
+        if (on == null) on = new java.util.HashMap<>();
+        if (rgb == null) rgb = new java.util.HashMap<>();
+        if (num == null) num = new java.util.HashMap<>();
+        Config d = new Config();
+        if (pPanel == null) pPanel = d.pPanel;
+        if (pKeys == null) pKeys = d.pKeys;
+        if (pArmor == null) pArmor = d.pArmor;
+        if (pPot == null) pPot = d.pPot;
+        if (pTarget == null) pTarget = d.pTarget;
+        if (pCd == null) pCd = d.pCd;
+        if (pGraph == null) pGraph = d.pGraph;
+        hudScale = cf(hudScale, 0.5f, 2f); hue = cf(hue, 0f, 1f); rainbowSpeed = cf(rainbowSpeed, 0.1f, 5f);
+        bgOpacity = ci(bgOpacity, 0, 255); chAlpha = ci(chAlpha, 30, 255); frameThick = ci(frameThick, 1, 10);
+        hitCount = ci(hitCount, 1, 30); cosIntensity = ci(cosIntensity, 1, 5); trailDensity = ci(trailDensity, 1, 8);
+        hatPoints = ci(hatPoints, 6, 30); auraCount = ci(auraCount, 1, 16); zoomFov = ci(zoomFov, 30, 70);
+        combatSecs = ci(combatSecs, 5, 60); lowHpThreshold = ci(lowHpThreshold, 2, 18); perfMinFps = ci(perfMinFps, 20, 120);
+        chSize = ci(chSize, 1, 20); chGap = ci(chGap, 0, 15); chThick = ci(chThick, 1, 6);
+        hitSize = ci(hitSize, 2, 12); hitTicks = ci(hitTicks, 2, 30);
+        preset = ci(preset, 0, PRESETS.length - 1); hitType = ci(hitType, 0, 7); killType = ci(killType, 0, 3);
+        pShape = ci(pShape, 0, 5); pColor = ci(pColor, 0, 3); hitSound = ci(hitSound, 0, 3); textMode = ci(textMode, 0, 1);
     }
 
     public static void load() {
         try { if (Files.exists(FILE)) I = GSON.fromJson(Files.readString(FILE), Config.class); } catch (Exception ignored) {}
         if (I == null) I = new Config();
+        I.sanitize();
     }
     public static void save() {
         try { Files.writeString(FILE, GSON.toJson(I)); } catch (Exception ignored) {}

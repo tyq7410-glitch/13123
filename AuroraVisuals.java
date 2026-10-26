@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -27,7 +28,7 @@ import java.util.List;
 
 public class AuroraVisuals implements ClientModInitializer {
     private static KeyBinding menuKey;
-    public static KeyBinding zoomKey, copyKey;
+    public static KeyBinding zoomKey, copyKey, panicKey, hudKey, fxKey;
     private static final ArrayDeque<Long> clicks = new ArrayDeque<>();
     private static boolean wasAttack = false;
     private static int hitTimer = 0;
@@ -42,8 +43,12 @@ public class AuroraVisuals implements ClientModInitializer {
 
         copyKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.auroravisuals.copy", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, cat));
 
+        panicKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.auroravisuals.panic", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_END, cat));
+        hudKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.auroravisuals.hud", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, cat));
+        fxKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.auroravisuals.fx", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, cat));
+
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-            while (menuKey.wasPressed()) mc.setScreen(new MainMenuScreen(mc.currentScreen));
+            while (menuKey.wasPressed()) mc.setScreen(new GuiScreen(mc.currentScreen));
             boolean atk = mc.options.attackKey.isPressed();
             if (atk && !wasAttack) clicks.add(System.currentTimeMillis());
             wasAttack = atk;
@@ -57,14 +62,28 @@ public class AuroraVisuals implements ClientModInitializer {
                 }
             }
             if (hitTimer > 0) hitTimer--;
-            Extras.tick(mc);
-            More.tick(mc);
-            More2.tick(mc);
-            More3.tick(mc);
+            while (panicKey.wasPressed()) {
+                Perf.panic = !Perf.panic;
+                if (mc.player != null)
+                    mc.player.sendMessage(Text.literal("Aurora Visuals: " + (Perf.panic ? "hidden (press the key again to show)" : "visible")), true);
+            }
+            while (hudKey.wasPressed()) {
+                Perf.hudHidden = !Perf.hudHidden;
+                if (mc.player != null) mc.player.sendMessage(Text.literal("Aurora Visuals HUD: " + (Perf.hudHidden ? "hidden" : "visible")), true);
+            }
+            while (fxKey.wasPressed()) {
+                Perf.fxOff = !Perf.fxOff;
+                if (mc.player != null) mc.player.sendMessage(Text.literal("Aurora Visuals effects: " + (Perf.fxOff ? "off" : "on")), true);
+            }
+            Perf.update(mc);
+            Safe.run("Extras.tick", () -> Extras.tick(mc));
+            Safe.run("More.tick", () -> More.tick(mc));
+            Safe.run("More2.tick", () -> More2.tick(mc));
+            Safe.run("More3.tick", () -> More3.tick(mc));
         });
 
         AttackEntityCallback.EVENT.register((p, w, h, e, hr) -> {
-            if (w.isClient()) { hitTimer = Config.I.hitTicks; Extras.onHit(e); }
+            if (w.isClient()) { hitTimer = Config.I.hitTicks; Safe.run("onHit", () -> Extras.onHit(e)); }
             return ActionResult.PASS;
         });
 
@@ -72,22 +91,29 @@ public class AuroraVisuals implements ClientModInitializer {
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (screen instanceof TitleScreen || screen instanceof GameMenuScreen)
                 Screens.getButtons(screen).add(ButtonWidget.builder(Text.literal("Aurora Visuals"),
-                    b -> client.setScreen(new MainMenuScreen(screen))).dimensions(6, 6, 100, 20).build());
+                    b -> client.setScreen(new GuiScreen(screen))).dimensions(6, 6, 100, 20).build());
         });
 
         HudElementRegistry.attachElementAfter(VanillaHudElements.MISC_OVERLAYS,
             Identifier.of("auroravisuals", "hud"), (ctx, tick) -> renderHud(ctx));
 
         HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, vanilla -> (ctx, tick) -> {
-            if (Config.I.crosshair) renderCrosshair(ctx); else vanilla.render(ctx, tick);
+            if (Config.I.crosshair && !Perf.panic) Safe.run("crosshair", () -> renderCrosshair(ctx)); else vanilla.render(ctx, tick);
         });
     }
 
     // ---- helpers shared with Extras / editor
     public static void begin(DrawContext ctx, Config.Pos p, int sw, int sh) {
+        Config c = Config.I;
+        float sc = c.hudScale * (c.autoShrink ? Math.min(1f, sh / 240f) : 1f);
+        float x = p.x * sw, y = p.y * sh;
+        if (c.keepOnScreen) {
+            x = Math.max(0f, Math.min(x, sw - Math.max(10f, p.w)));
+            y = Math.max(0f, Math.min(y, sh - Math.max(10f, p.h)));
+        }
         ctx.getMatrices().pushMatrix();
-        ctx.getMatrices().translate(p.x * sw, p.y * sh);
-        ctx.getMatrices().scale(Config.I.hudScale, Config.I.hudScale);
+        ctx.getMatrices().translate(x, y);
+        ctx.getMatrices().scale(sc, sc);
     }
     public static void end(DrawContext ctx) { ctx.getMatrices().popMatrix(); }
 
@@ -102,6 +128,12 @@ public class AuroraVisuals implements ClientModInitializer {
     }
 
     private static void renderHud(DrawContext ctx) {
+        if (Perf.panic || Perf.hudHidden) return;
+        if (Config.I.hideInChat && MinecraftClient.getInstance().currentScreen instanceof ChatScreen) return;
+        Safe.run("hud", () -> renderHudInner(ctx));
+    }
+
+    private static void renderHudInner(DrawContext ctx) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.options.hudHidden) return;
         More.renderBack(ctx, mc);
@@ -122,22 +154,27 @@ public class AuroraVisuals implements ClientModInitializer {
         }
         if (c.coords) lines.add(String.format("XYZ: %.0f %.0f %.0f", mc.player.getX(), mc.player.getY(), mc.player.getZ()));
         Extras.addInfoLines(lines, mc);
+        if (Perf.isLimited()) lines.add("FX paused: low FPS");
         More.addLines(lines, mc);
         More2.addLines(lines, mc);
         More3.addLines(lines, mc);
+        if (c.streamer) lines.removeIf(ln0 -> ln0.startsWith("XYZ:") || ln0.startsWith("IP:") || ln0.startsWith("Death:")
+            || ln0.startsWith("Overworld:") || ln0.startsWith("Nether:") || ln0.startsWith("Chunk:")
+            || ln0.startsWith("Biome:") || ln0.startsWith("Looking:") || ln0.startsWith("Below:"));
 
         if (!lines.isEmpty()) {
             int w = 0;
             for (String s : lines) w = Math.max(w, mc.textRenderer.getWidth(s));
-            int h = lines.size() * 11 + 3;
+            int lh = c.compact ? 9 : 11;
+            int h = lines.size() * lh + 3;
             begin(ctx, c.pPanel, sw, sh);
             panel(ctx, 0, 0, w + 8, h, acc);
             for (int i = 0; i < lines.size(); i++) {
                 String ln = lines.get(i);
                 int lc = (i == 0 && c.watermark) ? acc : c.textCol();
-                if (c.fpsColor && ln.startsWith("FPS:")) { int f = mc.getCurrentFps(); lc = f >= 120 ? 0xFF55FF55 : f >= 60 ? 0xFFFFFF55 : 0xFFFF5555; }
-                if (c.pingColor && ln.startsWith("Ping:")) lc = pingVal <= 60 ? 0xFF55FF55 : pingVal <= 150 ? 0xFFFFFF55 : 0xFFFF5555;
-                ctx.drawText(mc.textRenderer, ln, 5, 3 + i * 11, lc, c.textShadow);
+                if (c.fpsColor && ln.startsWith("FPS:")) { int f = mc.getCurrentFps(); lc = f >= 120 ? Config.good() : f >= 60 ? 0xFFFFFF55 : Config.bad(); }
+                if (c.pingColor && ln.startsWith("Ping:")) lc = pingVal <= 60 ? Config.good() : pingVal <= 150 ? 0xFFFFFF55 : Config.bad();
+                ctx.drawText(mc.textRenderer, ln, 5, 3 + i * lh, lc, c.textShadow);
             }
             end(ctx);
             c.pPanel.w = (w + 8) * c.hudScale; c.pPanel.h = h * c.hudScale;
@@ -160,6 +197,10 @@ public class AuroraVisuals implements ClientModInitializer {
         More.render(ctx, mc);
         More2.render(ctx, mc);
         More3.render(ctx, mc);
+        if (c.welcomeHint && System.currentTimeMillis() - Perf.joinAt < 10000) {
+            String hint = "Aurora Visuals: Right Shift = menu | End = hide all";
+            ctx.drawText(mc.textRenderer, hint, (sw - mc.textRenderer.getWidth(hint)) / 2, sh - 60, 0xFFFFFFFF, true);
+        }
     }
 
     private static void key(DrawContext ctx, MinecraftClient mc, int x, int y, int w, String s, boolean down, int acc) {
